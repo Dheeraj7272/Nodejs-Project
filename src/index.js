@@ -1,10 +1,19 @@
 import dotenv from "dotenv";
 import connectDB from "./db/index.js";
+import express from "express";
 
-
+const app = express();
 dotenv.config();
 
-connectDB();
+connectDB().then(() => {
+    app.listen(process.env.PORT || 8000, () => {
+        console.log(`Server started on port ${process.env.PORT || 8000}`);
+    });
+
+}).catch((error) => {
+    console.error("Failed to start server:", error);
+    process.exit(1); // Exit the process with failure
+});
 
 
 
