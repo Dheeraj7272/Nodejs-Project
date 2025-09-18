@@ -16,7 +16,7 @@ const userSchema = new Schema(
       type: String,
       required: [true, "Email is required"],
     },
-    fullname: {
+    fullName: {
       type: String,
       required: [true, "Fullname is required"],
       trim: true,
@@ -24,7 +24,7 @@ const userSchema = new Schema(
     avatar: {
       type: String, // avatar string we will be getting from cloud storage
     },
-    coverimage: {
+    coverImage: {
       type: String,
     },
     password: {
@@ -58,7 +58,7 @@ userSchema.methods.generateAccessToken = function () {
       _id: this._id,
       username: this.username,
       email: this.email,
-      fullname: this.fullname,
+      fullName: this.fullName,
     },
     process.env.ACCESS_TOKEN_SECRET,
     { expiresIn: process.env.ACCESS_TOKEN_EXPIREDIN }
