@@ -48,8 +48,8 @@ const registerUser = asyncHandler(async (req, res) => {
     username: username.toLowerCase(),
     email,
     password,
-    coverImage: uploadedcoverImage?.secure_url || "",
-    avatar: uploadedAvatar.secure_url,
+    coverImage: uploadedcoverImage?.url || "",
+    avatar: uploadedAvatar.url,
   });
 
   const userCreated = await User.findById(user._id).select(
@@ -171,4 +171,181 @@ const refreshToken = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, { accessToken, refreshToken, userData: user }));
 });
 
-export { registerUser, loginUser, logoutUser, refreshToken };
+const updatePassword = asyncHandler(async (req, res) => {
+  const { oldPassword, newPassword } = req.body;
+  const user = await User.findById(req.user?._id);
+  const isPasswordCorrect = await user.isPasswordCorrect(oldPassword);
+  const newPasswordIsSameAsOld = await user.isPasswordCorrect(newPassword);
+  if (!isPasswordCorrect) {
+    throw new ApiError("Old password is incorrect", 400);
+  }
+  if (newPasswordIsSameAsOld) {
+    throw new ApiError("New password is same as old password", 400);
+  }
+  // const user = await User.findById
+  user.password = newPassword;
+  await user.save();
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, "password updated successfully", {}));
+});
+
+const getCurrentUser = asyncHandler(async (req, req) => {
+  return res
+    .status(200)
+    .json(new ApiResponse(200, "Current user fetched successfully", req.user));
+});
+
+const updateUserProfile = async (req, res) => {
+  const { fullName, email } = req.body;
+  if (!fullName || !email) {
+    throw new ApiError("Full name and email are required", 400);
+  }
+  const user = await User.findByIdAndUpdate(
+    req.user._id,
+    {
+      $set: {
+        fullName,
+        email,
+      },
+    },
+    {
+      new: true,
+    }
+  ).select("-password");
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, "user profile updated successfully", user));
+};
+
+const updateUserAvatar = asyncHandler(async (req, res) => {
+  const avatarLocalPath = req.file?.path;
+  if (!avatarLocalPath) {
+    throw new ApiError("Avatar file is required", 400);
+  }
+  const uploadedAvatar = await uploadToCloudinary(avatarLocalPath);
+  if (!uploadedAvatar?.url) {
+    throw new ApiError(400, "Error while uploading on avatar");
+  }
+
+  const user = await User.findByIdAndUpdate(
+    req.user._id,
+    {
+      $set: {
+        avatar: uploadedAvatar.url,
+      },
+    },
+    {
+      new: true,
+    }
+  ).select("-password");
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, "User avatar updated successfully", user));
+});
+const updateCoverImage = asyncHandler(async (req, res) => {
+  const coverImageLocalPath = req.file?.path;
+  if (!coverImageLocalPath) {
+    throw new ApiError("coverImage file is required", 400);
+  }
+  const uploadedCoverImage = await uploadToCloudinary(coverImageLocalPath);
+  if (!uploadedCoverImage?.url) {
+    throw new ApiError(400, "Error while uploading on coverImage");
+  }
+
+  const user = await User.findByIdAndUpdate(
+    req.user._id,
+    {
+      $set: {
+        coverImage: uploadedCoverImage.url,
+      },
+    },
+    {
+      new: true,
+    }
+  ).select("-password");
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, "User cover Image updated successfully", user));
+});
+
+const getChannelInfo = asyncHandler(async (req, res) => {
+  const { username } = req.params;
+  if (!username?.trim()) {
+    throw new ApiError("Username is required", 400);
+  }
+  const channel = await User.aggregate([
+    {
+      $match: {
+        username: username.toLowerCase(),
+      },
+    },
+    {
+      $lookup: {
+        from: "subscriptions",
+        localField: "_id",
+        foreignField: "channel",
+        as: "subscribers",
+      },
+    },
+    {
+      $lookup: {
+        from: "subscriptions",
+        localField: "_id",
+        foreignField: "subscriber",
+        as: "channelsSubscribedTo",
+      },
+    },
+    {
+      $addFields: {
+        subscribersCount: {
+          $size: "$subscribers",
+        },
+        channelsSubscribedToCount: {
+          $size: "$channelsSubscribedTo",
+        },
+        isSubscriber: {
+          $cond: {
+            if: {
+              $in: [req.user?._id, "$subscribers.subscriber"],
+            },
+            then: true,
+            else: false,
+          },
+        },
+      },
+    },
+    {
+      $project: {
+        fullName: 1,
+        username: 1,
+        email: 1,
+        subscribersCount: 1,
+        channelsSubscribedToCount: 1,
+        avatar: 1,
+        coverImage: 1,
+        isSubscriber: 1,
+      },
+    },
+  ]);
+  if(!channel?.length){
+    throw new ApiError("Channel not found", 404);
+  }
+
+  return res.status(200).json(new ApiResponse(200, "channel data fetched successfully", channel[0]))
+});
+export {
+  registerUser,
+  loginUser,
+  logoutUser,
+  refreshToken,
+  getCurrentUser,
+  updateUserProfile,
+  updateCoverImage,
+  updateUserAvatar,
+  updatePassword,
+};
