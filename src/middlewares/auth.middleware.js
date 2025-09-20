@@ -1,7 +1,7 @@
 import jwt from "jsonwebtoken"
-import asyncHandler from "../utils/asyncHandler"
-import { ApiError } from "../utils/ApiError";
-import { User } from "../models/user.models";
+import asyncHandler from "../utils/asyncHandler.js"
+import { ApiError } from "../utils/ApiError.js";
+import { User } from "../models/user.models.js";
 
 export const verifyJwt = asyncHandler(async(req, _, next) => {
     try {
@@ -11,7 +11,7 @@ export const verifyJwt = asyncHandler(async(req, _, next) => {
         }
 
         const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
-        const userData = User.findById(decoded._id).select("-password -refreshToken");
+        const userData = await User.findById(decoded._id).select("-password -refreshToken");
         if(!userData){
             throw new ApiError("User not found", 404);
         }

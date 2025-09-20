@@ -5,9 +5,9 @@ import {
   replaceVideo,
   updateDetails,
   uploadVideo,
-} from "../controllers/video.controller";
-import { verifyJwt } from "../middlewares/auth.middleware";
-import { upload } from "../middlewares/multer.middlewares";
+} from "../controllers/video.controller.js";
+import { verifyJwt } from "../middlewares/auth.middleware.js";
+import { upload } from "../middlewares/multer.middlewares.js";
 
 const videoRouter = Router();
 

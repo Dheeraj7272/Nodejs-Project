@@ -28,7 +28,7 @@ const registerUser = asyncHandler(async (req, res) => {
   //   throw new ApiError("Invalid email address", 400)
   // }
 
-  const avatarLocalPath = req.files?.avatar[0]?.path;
+  const avatarLocalPath = req.files?.avatar?.[0]?.path;
   const coverImageLocalPath = req.files?.coverImage?.[0]?.path;
 
   if (!avatarLocalPath) {
@@ -56,6 +56,8 @@ const registerUser = asyncHandler(async (req, res) => {
   const userCreated = await User.findById(user._id).select(
     "-password -refreshToken"
   );
+  // const {refreshToken, accessToken} = await getAccessTokenAndRefreshToken(userCreated._id);
+  // console.log(accessToken);
   if (!userCreated) {
     throw new ApiError(
       "Failed to create user whilte registering the user",
@@ -70,7 +72,7 @@ const registerUser = asyncHandler(async (req, res) => {
 const getAccessTokenAndRefreshToken = async (userId) => {
   try {
     const user = await User.findById(userId);
-    const accessToken = user.generateAcessToken();
+    const accessToken = user.generateAccessToken();
     const refreshToken = user.generateRefreshToken();
     user.refreshToken = refreshToken;
     await user.save({ validateBeforeSave: false });
@@ -80,6 +82,8 @@ const getAccessTokenAndRefreshToken = async (userId) => {
   }
 };
 const loginUser = asyncHandler(async (req, res) => {
+  console.log("Inside loginUser")
+  console.log(req.body);
   const { username, email, password } = req.body;
   // Logic for logging in user
 
@@ -92,7 +96,7 @@ const loginUser = asyncHandler(async (req, res) => {
     throw new ApiError("User not found", 404);
   }
 
-  const isPasswordCorrect = await User.isPasswordCorrect(password);
+  const isPasswordCorrect = await user.isPasswordCorrect(password);
   if (!isPasswordCorrect) {
     throw new ApiError("Invalid password", 400);
   }
@@ -123,7 +127,7 @@ const loginUser = asyncHandler(async (req, res) => {
     );
 });
 
-export const logoutUser = asyncHandler(async (req, res) => {
+const logoutUser = asyncHandler(async (req, res) => {
   await User.findByIdAndUpdate(
     req.user._id,
     {
@@ -149,13 +153,13 @@ const refreshToken = asyncHandler(async (req, res) => {
   if (!token) {
     throw new ApiError("Refresh token not found", 401);
   }
-  const decoded = jwt.verify(token, process.env.REFRESH_ACCESS_TOKEN_SECRET);
+  const decoded = jwt.verify(token, process.env.REFRESH_TOKEN_SECRET);
   if (!decoded?._id) {
     throw new ApiError("Invalid refresh token", 401);
   }
 
   const user = await User.findById(decoded?._id).select(
-    "-password -refreshToken"
+    "-password"
   );
   if (!user || user.refreshToken !== token) {
     throw new ApiError("Invalid refresh token", 401);
@@ -192,7 +196,7 @@ const updatePassword = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, "password updated successfully", {}));
 });
 
-const getCurrentUser = asyncHandler(async (req, req) => {
+const getCurrentUser = asyncHandler(async (req, res) => {
   return res
     .status(200)
     .json(new ApiResponse(200, "Current user fetched successfully", req.user));
