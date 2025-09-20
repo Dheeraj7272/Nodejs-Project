@@ -5,6 +5,8 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { uploadToCloudinary } from "../utils/cloudinary.js";
 import { Video } from "../models/video.model.js";
 import fs from "fs";
+import { User } from "../models/user.models.js";
+import { isValidObjectId } from "mongoose";
 // Upload video
 
 const uploadVideo = asyncHandler(async (req, res) => {
@@ -42,7 +44,7 @@ const uploadVideo = asyncHandler(async (req, res) => {
     thumbnail: uploadedThumbnailPath.url,
     owner: userId,
     views: 0,
-    duration: newVideo?.duration ?? 0,
+    duration: uploadedVideoPath?.duration ?? 0,
   });
   if (!video) {
     throw new ApiError("Video could not be uploaded", 500);
@@ -232,13 +234,42 @@ const removeVideo = asyncHandler(async (req, res) => {
     new: true,
   });
   console.log(deletedVideo);
-  return res.status(200).json(new ApiResponse(200, "Video has been deleted", {}));
+  return res
+    .status(200)
+    .json(new ApiResponse(200, "Video has been deleted", {}));
 });
+
+const getAllVideos = asyncHandler(async (req, res) => {
+  const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query;
+  //TODO: get all videos based on query, sort, pagination
+  if (!userId) {
+    throw new ApiError("Video creater is required");
+  }
+  if (!isValidObjectId(userId)) {
+    throw new ApiError("Invalid creator");
+  }
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new ApiError("Invalid creator");
+  }
+  const videos = await Video.find({
+    owner: userId,
+  });
+
+  if (!videos?.length) {
+    throw new ApiError("No videos found", 404);
+  }
+  return res
+    .status(200)
+    .json(new ApiResponse(200, "Videos detail provided", videos));
+});
+
 export {
   uploadVideo,
   changeVideoPublicity,
   replaceThumbnail,
   updateDetails,
   replaceVideo,
-  removeVideo
+  removeVideo,
+  getAllVideos,
 };
