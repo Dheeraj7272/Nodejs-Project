@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   changeVideoPublicity,
+  removeVideo,
   replaceThumbnail,
   replaceVideo,
   updateDetails,
@@ -36,6 +37,5 @@ videoRouter
 videoRouter
   .route("/:videoId/replace-video")
   .patch(verifyJwt, upload.single("video"), replaceVideo);
-
-
-  export default videoRouter;
+videoRouter.route("/:videoId/delete").delete(verifyJwt,removeVideo);
+export default videoRouter;
