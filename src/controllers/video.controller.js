@@ -6,7 +6,7 @@ import { uploadToCloudinary } from "../utils/cloudinary.js";
 import { Video } from "../models/video.model.js";
 import fs from "fs";
 import { User } from "../models/user.models.js";
-import { isValidObjectId } from "mongoose";
+import mongoose, { isValidObjectId } from "mongoose";
 // Upload video
 
 const uploadVideo = asyncHandler(async (req, res) => {
@@ -240,7 +240,14 @@ const removeVideo = asyncHandler(async (req, res) => {
 });
 
 const getAllVideos = asyncHandler(async (req, res) => {
-  const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query;
+  const {
+    page = 2,
+    limit = 1,
+    query = "",
+    sortBy = "updatedAt",
+    sortType = "desc",
+    userId,
+  } = req.query;
   //TODO: get all videos based on query, sort, pagination
   if (!userId) {
     throw new ApiError("Video creater is required");
@@ -252,13 +259,63 @@ const getAllVideos = asyncHandler(async (req, res) => {
   if (!user) {
     throw new ApiError("Invalid creator");
   }
-  const videos = await Video.find({
-    owner: userId,
-  });
+  // const videos = await Video.find({
+  //   owner: userId,
+  // });
 
-  if (!videos?.length) {
-    throw new ApiError("No videos found", 404);
-  }
+  // Remove incorrect aggregatePaginate usage or replace with correct pagination if needed
+  // Example: If using mongoose-paginate-v2
+  // const videos = await Video.paginate({ owner: userId }, { page, limit, sort: { [sortBy || "createdAt"]: sortType === "desc" ? -1 : 1 } });
+  const videos = await Video.aggregatePaginate(
+    Video.aggregate([
+      {
+        $match: { owner: new mongoose.Types.ObjectId(userId) },
+      },
+      {
+        $match: {
+          $or: [
+            { title: { $regex: query, $options: "i" } },
+            { description: { $regex: query, $options: "i" } },
+          ],
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "owner",
+          foreignField: "_id",
+          as: "owner",
+          pipeline: [
+            {
+              $project: {
+                username: 1,
+                fullName: 1,
+                description: 1,
+                thumbnail: 1,
+              },
+            },
+          ],
+        },
+      },
+      {
+        $addFields: {
+          owner: { $first: "$owner" },
+        },
+      },
+      {
+        $sort: {
+          [sortBy]: sortType === "desc" ? -1 : 1,
+        },
+      },
+    ]),
+    {
+      limit,
+      page,
+    }
+  );
+  // if (!videos?.length) {
+  //   throw new ApiError("No videos found", 404);
+  // }
   return res
     .status(200)
     .json(new ApiResponse(200, "Videos detail provided", videos));
