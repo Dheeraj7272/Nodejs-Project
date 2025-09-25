@@ -31,7 +31,7 @@ const toggleSubscription = asyncHandler(async (req, res) => {
     await User.findByIdAndUpdate(
       channelInfo._id,
       {
-        $s: {
+        $inc: {
           subcount: -1,
         },
       },
@@ -48,7 +48,7 @@ const toggleSubscription = asyncHandler(async (req, res) => {
     await User.findByIdAndUpdate(
       channelInfo._id,
       {
-        $s: {
+        $inc: {
           subcount: 1,
         },
       },
@@ -197,13 +197,13 @@ const getChannelSubscriptions = asyncHandler(async (req, res) => {
   if (subscribedChannels.length == 0)
     return res
       .status(200)
-      .json(new ApiResponse(200, "No subscribed channels", []));
+      .json(new ApiResponse(200, "No subscribers", []));
   return res
     .status(200)
     .json(
       new ApiResponse(
         200,
-        "subscribed channels information found",
+        "subscribers information found",
         subscribedChannels
       )
     );
