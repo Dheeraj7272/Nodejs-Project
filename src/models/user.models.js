@@ -35,6 +35,10 @@ const userSchema = new Schema(
       type: String,
     },
     watchhistory: [{ type: Schema.Types.ObjectId, ref: "Video" }],
+    subcount: {
+      type: Number,
+      default: 0,
+    },
   },
   { timestamps: true }
 );
